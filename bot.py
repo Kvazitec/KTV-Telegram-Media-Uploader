@@ -1,6 +1,6 @@
 # <<AI 
 # CAUTION! AI Generated
-# AI This code was generated with DeepSeek R1
+# This code was generated with DeepSeek R1
 # The code generation using neural networks was performed by Kvazitec.
 
 """
