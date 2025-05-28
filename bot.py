@@ -1,0 +1,156 @@
+# <<AI 
+# CAUTION! AI Generated
+# AI This code was generated with DeepSeek R1
+# The code generation using neural networks was performed by Kvazitec.
+
+"""
+Original Russian prompt:
+Напиши код для телеграмм бота на Python для запуска на windows, который должен загружать фотографии и видео в супергруппу из указаной папки на компьютере, создавая для каждой дочерней папки тему в группе, если эти фотографии и видео в группе отсутствуют
+
+English translation:
+Write Python code for a Telegram bot to run on Windows that should upload photos and videos to a supergroup from a specified folder on the computer, creating a topic in the group for each subfolder if these photos and videos are not already present in the group
+"""
+
+"""
+User feedback:
+The initial code had issues with unexpected keyword arguments in the Telegram Bot API methods
+
+Error encountered:
+got an unexpected keyword argument 'document' in send_photo/send_video methods
+
+The code has been fixed to work with python-telegram-bot v20.x+ async API
+"""
+
+import os
+import sqlite3
+import asyncio
+import logging
+from telegram import Bot, InputFile
+from telegram.error import TelegramError
+
+# Configure logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# Configuration
+TOKEN = 'YOUR_BOT_TOKEN'
+CHAT_ID = -1001234567890  # Replace with your supergroup ID
+BASE_DIR = 'C:/media_folder'  # Path to target folder
+CHECK_INTERVAL = 60  # Check interval in seconds
+
+# Initialize database
+conn = sqlite3.connect('media_bot.db')
+cursor = conn.cursor()
+
+# Create tables
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS folders (
+        id INTEGER PRIMARY KEY,
+        path TEXT UNIQUE,
+        topic_id INTEGER
+    )
+''')
+
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS files (
+        id INTEGER PRIMARY KEY,
+        file_path TEXT UNIQUE,
+        message_id INTEGER,
+        topic_id INTEGER,
+        chat_id INTEGER
+    )
+''')
+conn.commit()
+
+# Initialize bot
+bot = Bot(token=TOKEN)
+
+async def create_forum_topic(folder_name):
+    """Creates a new topic in the supergroup"""
+    try:
+        result = await bot.create_forum_topic(
+            chat_id=CHAT_ID,
+            name=folder_name
+        )
+        return result.message_thread_id
+    except TelegramError as e:
+        logger.error(f"Error creating topic: {e}")
+        return None
+
+async def get_or_create_topic(folder_path):
+    """Returns topic ID for folder, creates if needed"""
+    cursor.execute('SELECT topic_id FROM folders WHERE path = ?', (folder_path,))
+    if row := cursor.fetchone():
+        return row[0]
+    
+    folder_name = os.path.basename(folder_path)
+    if topic_id := await create_forum_topic(folder_name):
+        cursor.execute('INSERT INTO folders (path, topic_id) VALUES (?, ?)',
+                      (folder_path, topic_id))
+        conn.commit()
+        return topic_id
+    return None
+
+async def upload_media(file_path, topic_id):
+    """Uploads media file to specified topic"""
+    try:
+        cursor.execute('SELECT 1 FROM files WHERE file_path = ?', (file_path,))
+        if cursor.fetchone():
+            return
+
+        ext = os.path.splitext(file_path)[1].lower()
+        with open(file_path, 'rb') as f:
+            if ext in ('.jpg', '.jpeg', '.png'):
+                message = await bot.send_photo(
+                    chat_id=CHAT_ID,
+                    message_thread_id=topic_id,
+                    photo=InputFile(f)
+                )
+            elif ext in ('.mp4', '.mov', '.avi'):
+                message = await bot.send_video(
+                    chat_id=CHAT_ID,
+                    message_thread_id=topic_id,
+                    video=InputFile(f)
+                )
+            else:
+                logger.warning(f"Unsupported format: {file_path}")
+                return
+
+        cursor.execute('''
+            INSERT INTO files (file_path, message_id, topic_id, chat_id)
+            VALUES (?, ?, ?, ?)
+        ''', (file_path, message.message_id, topic_id, CHAT_ID))
+        conn.commit()
+        logger.info(f"Successfully uploaded: {file_path}")
+
+    except Exception as e:
+        logger.error(f"Upload error {file_path}: {e}")
+
+async def scan_folder():
+    """Recursively scans folder and processes files"""
+    for root, dirs, files in os.walk(BASE_DIR):
+        if root == BASE_DIR:
+            continue  # Skip root folder
+        
+        if topic_id := await get_or_create_topic(root):
+            for file in files:
+                file_path = os.path.join(root, file)
+                await upload_media(file_path, topic_id)
+
+async def main():
+    """Main bot loop"""
+    while True:
+        logger.info("Starting scan...")
+        await scan_folder()
+        await asyncio.sleep(CHECK_INTERVAL)
+
+if __name__ == '__main__':
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        conn.close()
+        logger.info("Bot stopped")
+#AI>>
