@@ -1,12 +1,12 @@
 Setup Instructions:
 
-    Install required dependencies:
+  Install required dependencies:
 
-Run in bash terminal:
+  Run in bash terminal:
 
-  pip install python-telegram-bot
+    pip install python-telegram-bot
 
-    Replace placeholders in the code:
+  Replace placeholders in the code:
 
         YOUR_BOT_TOKEN → Your bot's token
 
@@ -26,7 +26,7 @@ Run in bash terminal:
 
 Run in bash terminal:
 
-  python bot.py
+    python bot.py
 
 Implementation Features:
 
