@@ -2,7 +2,7 @@ Setup Instructions:
 
   Install required dependencies:
 
-  Run in bash terminal:
+  Run in cmd:
 
     pip install python-telegram-bot
 
@@ -14,7 +14,7 @@ Setup Instructions:
 
         BASE_DIR → Path to your media folder
 
-    Verify the following:
+   Verify the following:
 
         The bot is added to the supergroup as an administrator
 
@@ -22,9 +22,9 @@ Setup Instructions:
 
         The specified paths exist and are readable
 
-    Launch the bot:
+Launch the bot:
 
-Run in bash terminal:
+  Run in cmd:
 
     python bot.py
 
